@@ -1,0 +1,7 @@
+# ignore all idea settings
+.idea/*
+*.iws
+*.iml
+*.ipr
+
+.DS_Store
