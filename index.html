@@ -8,10 +8,8 @@
         body {
             font-family: Arial, sans-serif;
             background: #f4f4f4;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+            min-height: 100vh;
+            margin: 0;
         }
         .container {
             background: #fff;
@@ -21,7 +19,9 @@
             display: flex;
             flex-direction: column;
             gap: 1rem;
-            min-width: 300px;
+            max-width: 300px;
+            width: 300px;
+            margin: 2rem auto;
         }
         textarea {
             padding: 0.5rem;
@@ -30,9 +30,10 @@
             border-radius: 4px;
             resize: vertical;
             min-height: 20em;
-            max-height: 40em;
+            max-height: 60vh;
             width: 100%;
             box-sizing: border-box;
+            overflow-y: auto;
         }
         button {
             padding: 0.5rem 1rem;
@@ -50,11 +51,13 @@
         @media (max-width: 600px) {
             .container {
                 min-width: unset;
-                width: 95vw;
+                width: 98vw;
                 padding: 1rem;
+                margin: 1rem auto;
             }
             textarea {
-                min-height: 10em;
+                min-height: 8em;
+                max-height: 40vh;
                 font-size: 1em;
             }
         }
@@ -76,8 +79,36 @@
             if (!match) return null;
             let name = match[1].trim();
             let power = match[2];
-            // If 'M' is present, just remove it, do not multiply
+            // If 'M' is present, remove it
             return { name, power };
+        }
+
+        function variance(arr) {
+            if (arr.length === 0) return 0;
+            const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+            return arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / arr.length;
+        }
+
+        function divideTeamsSnakeDraft(players) {
+            // Sort players by power descending
+            const sorted = [...players].sort((a, b) => Number(b.power) - Number(a.power));
+            const teamA = [];
+            const teamB = [];
+            let direction = 1; // 1 for A->B, -1 for B->A
+            let i = 0;
+            while (i < sorted.length) {
+                if (direction === 1) {
+                    if (i < sorted.length) teamA.push(sorted[i++]);
+                    if (i < sorted.length) teamB.push(sorted[i++]);
+                } else {
+                    if (i < sorted.length) teamB.push(sorted[i++]);
+                    if (i < sorted.length) teamA.push(sorted[i++]);
+                }
+                direction *= -1;
+            }
+            const sumA = teamA.reduce((acc, p) => acc + Number(p.power), 0);
+            const sumB = teamB.reduce((acc, p) => acc + Number(p.power), 0);
+            return { teamA, teamB, sumA, sumB };
         }
 
         function processInput() {
@@ -101,13 +132,27 @@
                 }
                 html += '</ul></div>';
             } else if (validResults.length) {
-                html += '<table style="width:100%;border-collapse:collapse;margin-top:1rem;">';
-                html += '<thead><tr><th style="border:1px solid #ccc;padding:0.5em;text-align:left;">Name</th><th style="border:1px solid #ccc;padding:0.5em;text-align:left;">Power</th></tr></thead>';
-                html += '<tbody>';
-                for (const row of validResults) {
-                    html += `<tr><td style="border:1px solid #ccc;padding:0.5em;">${row.name}</td><td style="border:1px solid #ccc;padding:0.5em;">${row.power}</td></tr>`;
+                if (validResults.length < 2) {
+                    html += '<p style="color:#d00;">At least 2 valid players are required.</p>';
+                } else {
+                    const split = divideTeamsSnakeDraft(validResults);
+                    html += `<div style="margin-bottom:1em;"><strong>Team A (${split.sumA})</strong></div>`;
+                    html += '<table style="width:100%;border-collapse:collapse;margin-bottom:2em;">';
+                    html += '<thead><tr><th style="border:1px solid #ccc;padding:0.5em;text-align:left;">Name</th><th style="border:1px solid #ccc;padding:0.5em;text-align:left;">Power</th></tr></thead>';
+                    html += '<tbody>';
+                    for (const row of split.teamA) {
+                        html += `<tr><td style="border:1px solid #ccc;padding:0.5em;">${row.name}</td><td style="border:1px solid #ccc;padding:0.5em;">${row.power}</td></tr>`;
+                    }
+                    html += '</tbody></table>';
+                    html += `<div style="margin-bottom:1em;"><strong>Team B (${split.sumB})</strong></div>`;
+                    html += '<table style="width:100%;border-collapse:collapse;">';
+                    html += '<thead><tr><th style="border:1px solid #ccc;padding:0.5em;text-align:left;">Name</th><th style="border:1px solid #ccc;padding:0.5em;text-align:left;">Power</th></tr></thead>';
+                    html += '<tbody>';
+                    for (const row of split.teamB) {
+                        html += `<tr><td style="border:1px solid #ccc;padding:0.5em;">${row.name}</td><td style="border:1px solid #ccc;padding:0.5em;">${row.power}</td></tr>`;
+                    }
+                    html += '</tbody></table>';
                 }
-                html += '</tbody></table>';
             } else {
                 html += '<p style="color:#d00;">No valid entries found.</p>';
             }
