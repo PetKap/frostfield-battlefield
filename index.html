@@ -97,6 +97,7 @@
         <div id="resultTableContainer"></div>
     </div>
     <script>
+        let currentPlayers = [];
         function parseLine(line) {
             line = line.trim();
             if (!line) return null;
@@ -113,24 +114,81 @@
             return arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / arr.length;
         }
         function divideTeamsSnakeDraft(players) {
-            const sorted = [...players].sort((a, b) => Number(b.power) - Number(a.power));
+            // Use current order, not sorted
             const teamA = [];
             const teamB = [];
             let direction = 1;
             let i = 0;
-            while (i < sorted.length) {
+            while (i < players.length) {
                 if (direction === 1) {
-                    if (i < sorted.length) teamA.push(sorted[i++]);
-                    if (i < sorted.length) teamB.push(sorted[i++]);
+                    if (i < players.length) teamA.push(players[i++]);
+                    if (i < players.length) teamB.push(players[i++]);
                 } else {
-                    if (i < sorted.length) teamB.push(sorted[i++]);
-                    if (i < sorted.length) teamA.push(sorted[i++]);
+                    if (i < players.length) teamB.push(players[i++]);
+                    if (i < players.length) teamA.push(players[i++]);
                 }
                 direction *= -1;
             }
             const sumA = teamA.reduce((acc, p) => acc + Number(p.power), 0);
             const sumB = teamB.reduce((acc, p) => acc + Number(p.power), 0);
             return { teamA, teamB, sumA, sumB };
+        }
+        function getGroups(team) {
+            // Use current order, not sorted
+            return [
+                team.slice(0, 5),
+                team.slice(5, 10),
+                team.slice(10, 15),
+                team.slice(15, 20)
+            ];
+        }
+        function renderTable(players) {
+            const split = divideTeamsSnakeDraft(players);
+            const teamA_groups = getGroups(split.teamA);
+            const teamB_groups = getGroups(split.teamB);
+            const groupNames = ['Attack', 'Defense', 'Support', 'Gathering'];
+            const groupColors = ['#b6f7b0', '#b0d6f7', '#d6b0f7', '#fff7b0'];
+            let html = '';
+            html += `<div class="team-section"><div style="margin-bottom:1em;"><strong>Team A (${split.sumA})</strong></div>`;
+            html += '<div class="team-groups">';
+            for (let row = 0; row < 2; row++) {
+                html += '<div class="group-row">';
+                for (let col = 0; col < 2; col++) {
+                    let i = row * 2 + col;
+                    html += `<div class="group-box" style="background:${groupColors[i]};">`;
+                    html += `<strong>${groupNames[i]}</strong>`;
+                    html += '<table style="width:100%;border-collapse:collapse;">';
+                    html += '<tbody>';
+                    for (let j = 0; j < teamA_groups[i].length; j++) {
+                        const player = teamA_groups[i][j];
+                        html += `<tr><td style="border:1px solid #ccc;padding:0.5em;" draggable="true" data-team="A" data-group="${i}" data-index="${j}">${player.name} (${player.power})</td></tr>`;
+                    }
+                    html += '</tbody></table></div>';
+                }
+                html += '</div>';
+            }
+            html += '</div></div>';
+            html += `<div class="team-section team-b"><div style="margin-bottom:1em;"><strong>Team B (${split.sumB})</strong></div>`;
+            html += '<div class="team-groups">';
+            for (let row = 0; row < 2; row++) {
+                html += '<div class="group-row">';
+                for (let col = 0; col < 2; col++) {
+                    let i = row * 2 + col;
+                    html += `<div class="group-box" style="background:${groupColors[i]};">`;
+                    html += `<strong>${groupNames[i]}</strong>`;
+                    html += '<table style="width:100%;border-collapse:collapse;">';
+                    html += '<tbody>';
+                    for (let j = 0; j < teamB_groups[i].length; j++) {
+                        const player = teamB_groups[i][j];
+                        html += `<tr><td style="border:1px solid #ccc;padding:0.5em;" draggable="true" data-team="B" data-group="${i}" data-index="${j}">${player.name} (${player.power})</td></tr>`;
+                    }
+                    html += '</tbody></table></div>';
+                }
+                html += '</div>';
+            }
+            html += '</div></div>';
+            document.getElementById('resultTableContainer').innerHTML = html;
+            addDragDropHandlers();
         }
         function processInput() {
             const input = document.getElementById('inputField').value;
@@ -145,90 +203,73 @@
                     invalidEntries.push(line);
                 }
             }
-            let html = '';
             if (invalidEntries.length) {
-                html += '<div style="color:#d00;margin-bottom:1em;"><strong>Please fix the following invalid entries:</strong><ul style="margin:0;padding-left:1.2em;">';
+                let html = '<div style="color:#d00;margin-bottom:1em;"><strong>Please fix the following invalid entries:</strong><ul style="margin:0;padding-left:1.2em;">';
                 for (const entry of invalidEntries) {
                     html += `<li>${entry}</li>`;
                 }
                 html += '</ul></div>';
-            } else if (validResults.length) {
-                if (validResults.length !== 40) {
-                    html += '<p style="color:#d00;">Exactly 40 valid players are required.</p>';
-                } else {
-                    const split = divideTeamsSnakeDraft(validResults);
-                    function getGroups(team) {
-                        const sorted = [...team].sort((a, b) => Number(b.power) - Number(a.power));
-                        return [
-                            sorted.slice(0, 5),
-                            sorted.slice(5, 10),
-                            sorted.slice(10, 15),
-                            sorted.slice(15, 20)
-                        ];
-                    }
-                    const teamA_groups = getGroups(split.teamA);
-                    const teamB_groups = getGroups(split.teamB);
-                    const groupNames = ['Attack', 'Defense', 'Support', 'Gathering'];
-                    const groupColors = ['#b6f7b0', '#b0d6f7', '#d6b0f7', '#fff7b0'];
-                    html += `<div class="team-section"><div style="margin-bottom:1em;"><strong>Team A (${split.sumA})</strong></div>`;
-                    html += '<div class="team-groups">';
-                    html += '<div class="group-row">';
-                    for (let i = 0; i < 2; i++) {
-                        html += `<div class="group-box" style="background:${groupColors[i]};">`;
-                        html += `<strong>${groupNames[i]}</strong>`;
-                        html += '<table style="width:100%;border-collapse:collapse;">';
-                        html += '<tbody>';
-                        for (const row of teamA_groups[i]) {
-                            html += `<tr><td style="border:1px solid #ccc;padding:0.5em;">${row.name}</td></tr>`;
-                        }
-                        html += '</tbody></table></div>';
-                    }
-                    html += '</div>';
-                    html += '<div class="group-row">';
-                    for (let i = 2; i < 4; i++) {
-                        html += `<div class="group-box" style="background:${groupColors[i]};">`;
-                        html += `<strong>${groupNames[i]}</strong>`;
-                        html += '<table style="width:100%;border-collapse:collapse;">';
-                        html += '<tbody>';
-                        for (const row of teamA_groups[i]) {
-                            html += `<tr><td style="border:1px solid #ccc;padding:0.5em;">${row.name}</td></tr>`;
-                        }
-                        html += '</tbody></table></div>';
-                    }
-                    html += '</div>';
-                    html += '</div></div>';
-                    html += `<div class="team-section team-b"><div style="margin-bottom:1em;"><strong>Team B (${split.sumB})</strong></div>`;
-                    html += '<div class="team-groups">';
-                    html += '<div class="group-row">';
-                    for (let i = 0; i < 2; i++) {
-                        html += `<div class="group-box" style="background:${groupColors[i]};">`;
-                        html += `<strong>${groupNames[i]}</strong>`;
-                        html += '<table style="width:100%;border-collapse:collapse;">';
-                        html += '<tbody>';
-                        for (const row of teamB_groups[i]) {
-                            html += `<tr><td style="border:1px solid #ccc;padding:0.5em;">${row.name}</td></tr>`;
-                        }
-                        html += '</tbody></table></div>';
-                    }
-                    html += '</div>';
-                    html += '<div class="group-row">';
-                    for (let i = 2; i < 4; i++) {
-                        html += `<div class="group-box" style="background:${groupColors[i]};">`;
-                        html += `<strong>${groupNames[i]}</strong>`;
-                        html += '<table style="width:100%;border-collapse:collapse;">';
-                        html += '<tbody>';
-                        for (const row of teamB_groups[i]) {
-                            html += `<tr><td style="border:1px solid #ccc;padding:0.5em;">${row.name}</td></tr>`;
-                        }
-                        html += '</tbody></table></div>';
-                    }
-                    html += '</div>';
-                    html += '</div></div>';
-                }
-            } else {
-                html += '<p style="color:#d00;">No valid entries found.</p>';
+                document.getElementById('resultTableContainer').innerHTML = html;
+                return;
             }
-            document.getElementById('resultTableContainer').innerHTML = html;
+            if (validResults.length !== 40) {
+                document.getElementById('resultTableContainer').innerHTML = '<p style="color:#d00;">Exactly 40 valid players are required.</p>';
+                return;
+            }
+            currentPlayers = validResults;
+            renderTable(currentPlayers);
+        }
+        function addDragDropHandlers() {
+            let dragSrc = null;
+            let dragSrcData = null;
+            const cells = document.querySelectorAll('#resultTableContainer td[draggable="true"]');
+            cells.forEach(cell => {
+                cell.addEventListener('dragstart', function(e) {
+                    dragSrc = cell;
+                    dragSrcData = {
+                        team: cell.getAttribute('data-team'),
+                        group: parseInt(cell.getAttribute('data-group')),
+                        index: parseInt(cell.getAttribute('data-index'))
+                    };
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', cell.textContent);
+                    cell.style.opacity = '0.4';
+                });
+                cell.addEventListener('dragend', function(e) {
+                    cell.style.opacity = '';
+                });
+                cell.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                });
+                cell.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    if (!dragSrc || dragSrc === cell) return;
+                    const targetData = {
+                        team: cell.getAttribute('data-team'),
+                        group: parseInt(cell.getAttribute('data-group')),
+                        index: parseInt(cell.getAttribute('data-index'))
+                    };
+                    swapPlayers(dragSrcData, targetData);
+                });
+            });
+        }
+        function swapPlayers(src, tgt) {
+            // Get teams and groups
+            const split = divideTeamsSnakeDraft(currentPlayers);
+            let teamArrSrc = src.team === 'A' ? split.teamA : split.teamB;
+            let teamArrTgt = tgt.team === 'A' ? split.teamA : split.teamB;
+            let srcGroups = getGroups(teamArrSrc);
+            let tgtGroups = getGroups(teamArrTgt);
+            let srcPlayer = srcGroups[src.group][src.index];
+            let tgtPlayer = tgtGroups[tgt.group][tgt.index];
+            // Find actual index in currentPlayers
+            let srcIdx = currentPlayers.findIndex(p => p.name === srcPlayer.name && p.power === srcPlayer.power);
+            let tgtIdx = currentPlayers.findIndex(p => p.name === tgtPlayer.name && p.power === tgtPlayer.power);
+            if (srcIdx === -1 || tgtIdx === -1) return;
+            // Swap
+            [currentPlayers[srcIdx], currentPlayers[tgtIdx]] = [currentPlayers[tgtIdx], currentPlayers[srcIdx]];
+            renderTable(currentPlayers);
         }
         document.getElementById('processBtn').addEventListener('click', processInput);
     </script>
