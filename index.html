@@ -129,8 +129,8 @@
                 }
                 direction *= -1;
             }
-            const sumA = teamA.reduce((acc, p) => acc + Number(p.power), 0);
-            const sumB = teamB.reduce((acc, p) => acc + Number(p.power), 0);
+            const sumA = teamA.reduce((acc, p) => acc + Number(p.power), 0).toFixed(2);
+            const sumB = teamB.reduce((acc, p) => acc + Number(p.power), 0).toFixed(2);
             return { teamA, teamB, sumA, sumB };
         }
         function getGroups(team) {
